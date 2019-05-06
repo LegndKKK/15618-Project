@@ -11,26 +11,26 @@ float rand01()
 // std::vector<Particle> particles;
 Particle *particles;
 // 2-d array of particles' neighbors
-int **neighborIndex;  // (N, NEIGHBOR_NUM)
+short **neighborIndex;  // (N, NEIGHBOR_NUM)
 float **neighborDist; // (N, NEIGHBOR_NUM)
-int *neighborNum;     // (N, )
+short *neighborNum;     // (N, )
 
 // --------------------------------------------------------------------
 void init(const unsigned int N)
 {
     // for CUDA use
-    neighborIndex = (int **)malloc(N * sizeof(int *));
+    neighborIndex = (short **)malloc(N * sizeof(short *));
     neighborDist = (float **)malloc(N * sizeof(float *));
-    neighborNum = (int *)calloc(N, sizeof(int));
+    neighborNum = (short *)calloc(N, sizeof(short));
     particles = (Particle *)malloc(N * sizeof(Particle));
 
     // Initialize particles
     // We will make a block of particles with a total width of 1/4 of the screen.
-    float w = constantParams.SIM_W / 4;
+    float w = SIM_W / 4;
     int i = 0;
-    for (float y = constantParams.bottom + 1; y <= 100000; y += constantParams.r * 0.5f)
+    for (float y = bottom + 1; y <= 100000; y += r * 0.5f)
     {
-        for (float x = -w; x <= w; x += constantParams.r * 0.5f)
+        for (float x = -w; x <= w; x += r * 0.5f)
         {
             if (i == N)
             {
@@ -45,7 +45,7 @@ void init(const unsigned int N)
 
             particles[i] = p;
 
-            neighborIndex[i] = (int *)calloc(NEIGHBOR_NUM, sizeof(int));
+            neighborIndex[i] = (short *)calloc(NEIGHBOR_NUM, sizeof(short));
             neighborDist[i] = (float *)calloc(NEIGHBOR_NUM, sizeof(float));
             i++;
         }
@@ -134,7 +134,7 @@ class SpatialIndex
 };
 
 typedef SpatialIndex<Particle> IndexType;
-IndexType indexsp(4093, constantParams.r, true);
+IndexType indexsp(4093, r, true);
 
 // --------------------------------------------------------------------
 void step()
@@ -154,7 +154,7 @@ void step()
         particles[i].pos += particles[i].force;
 
         // Restart the forces with gravity only. We'll add the rest later.
-        particles[i].force = glm::vec2(0.0f, -::constantParams.G);
+        particles[i].force = glm::vec2(0.0f, -::G);
 
         // Calculate the velocity for later.
         particles[i].vel = particles[i].pos - particles[i].pos_old;
@@ -176,18 +176,18 @@ void step()
 
         // If the Particle is outside the bounds of the world, then
         // Make a little spring force to push it back in.
-        if (particles[i].pos.x < -constantParams.SIM_W)
-            particles[i].force.x -= (particles[i].pos.x - -constantParams.SIM_W) / 8;
-        if (particles[i].pos.x > constantParams.SIM_W)
-            particles[i].force.x -= (particles[i].pos.x - constantParams.SIM_W) / 8;
-        if (particles[i].pos.y < constantParams.bottom)
-            particles[i].force.y -= (particles[i].pos.y - constantParams.bottom) / 8;
-        //if( particles[i].pos.y > constantParams.SIM_W * 2 ) particles[i].force.y -= ( particles[i].pos.y - constantParams.SIM_W * 2 ) / 8;
+        if (particles[i].pos.x < -SIM_W)
+            particles[i].force.x -= (particles[i].pos.x - -SIM_W) / 8;
+        if (particles[i].pos.x > SIM_W)
+            particles[i].force.x -= (particles[i].pos.x - SIM_W) / 8;
+        if (particles[i].pos.y < bottom)
+            particles[i].force.y -= (particles[i].pos.y - bottom) / 8;
+        //if( particles[i].pos.y > SIM_W * 2 ) particles[i].force.y -= ( particles[i].pos.y - SIM_W * 2 ) / 8;
 
         // Handle the mouse attractor.
         // It's a simple spring based attraction to where the mouse is.
         const float attr_dist2 = glm::dot(particles[i].pos - attractor, particles[i].pos - attractor);
-        const float attr_l = constantParams.SIM_W / 4;
+        const float attr_l = SIM_W / 4;
         if (attracting)
         {
             if (attr_dist2 < attr_l * attr_l)
@@ -251,13 +251,13 @@ void step()
             const float rij_len2 = glm::dot(rij, rij);
 
             // If they're within the radius of support ...
-            if (rij_len2 < constantParams.rsq)
+            if (rij_len2 < rsq)
             {
                 // Get the actual distance from the squared distance.
                 float rij_len = sqrt(rij_len2);
 
                 // And calculated the weighted distance values
-                const float q = 1 - (rij_len / constantParams.r);
+                const float q = 1 - (rij_len / r);
                 const float q2 = q * q;
                 const float q3 = q2 * q;
 
@@ -290,15 +290,15 @@ void step()
 // PRESSURE
 // Make the simple pressure calculation from the equation of state.
 #if CUDA
-    Surprise_CUDA(PARTICLE_NUM, particles, (int *)neighborNum, (int *)neighborIndex, (float *)neighborDist);
+    Surprise_CUDA(PARTICLE_NUM, particles, (short *)neighborNum, (short *)neighborIndex, (float *)neighborDist);
 #else
 #if OMP
 #pragma omp parallel for
 #endif
     for (int i = 0; i < (int)PARTICLE_NUM; ++i)
     {
-        particles[i].press = constantParams.k * (particles[i].rho - constantParams.rest_density);
-        particles[i].press_near = constantParams.k_near * particles[i].rho_near;
+        particles[i].press = k * (particles[i].rho - rest_density);
+        particles[i].press_near = k_near * particles[i].rho_near;
     }
 
 // printf("---------\n");
@@ -385,7 +385,7 @@ void step()
         //     {
         //         // Calculate the viscosity impulse between the two particles
         //         // based on the quadratic function of projected length.
-        //         const glm::vec2 I = (1 - q) * ((*n.j).constantParams.sigma * u + (*n.j).constantParams.beta * u * u) * rijn;
+        //         const glm::vec2 I = (1 - q) * ((*n.j).sigma * u + (*n.j).beta * u * u) * rijn;
 
         //         // Apply the impulses on the current particle
         //         particles[i].vel -= I * 0.5f;
@@ -398,7 +398,7 @@ void step()
 
             const glm::vec2 rij = p.pos - particles[i].pos;
             const float l = glm::length(rij);
-            const float q = l / constantParams.r;
+            const float q = l / r;
 
             const glm::vec2 rijn = (rij / l);
             // Get the projection of the velocities onto the vector between them.
@@ -407,7 +407,7 @@ void step()
             {
                 // Calculate the viscosity impulse between the two particles
                 // based on the quadratic function of projected length.
-                const glm::vec2 I = (1 - q) * (constantParams.sigma * u + constantParams.beta * u * u) * rijn;
+                const glm::vec2 I = (1 - q) * (sigma * u + beta * u * u) * rijn;
 
                 // Apply the impulses on the current particle
                 particles[i].vel -= I * 0.5f;
@@ -427,17 +427,17 @@ void display(GLFWwindow *window)
     glfwGetWindowSize(window, &w, &h);
     glViewport(0, 0, w, h);
 
-    // create a world with dimensions x:[-constantParams.SIM_W,constantParams.SIM_W] and y:[0,constantParams.SIM_W*2]
+    // create a world with dimensions x:[-SIM_W,SIM_W] and y:[0,SIM_W*2]
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     const double ar = w / static_cast<double>(h);
-    glOrtho(ar * -constantParams.SIM_W, ar * constantParams.SIM_W, 0, 2 * constantParams.SIM_W, -1, 1);
+    glOrtho(ar * -SIM_W, ar * SIM_W, 0, 2 * SIM_W, -1, 1);
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
     // Draw Fluid Particles
-    glPointSize(constantParams.r * 2);
+    glPointSize(r * 2);
     glVertexPointer(2, GL_FLOAT, sizeof(Particle), &particles[0].pos);
     glColorPointer(3, GL_FLOAT, sizeof(Particle), &particles[0].r);
     glEnableClientState(GL_VERTEX_ARRAY);
@@ -456,7 +456,7 @@ unsigned int stepsPerFrame = 1;
 //         return;
 //     }
 
-//     const float radius = constantParams.SIM_W / 8;
+//     const float radius = SIM_W / 8;
 //     switch (key)
 //     {
 //     case GLFW_KEY_ESCAPE:
@@ -465,17 +465,17 @@ unsigned int stepsPerFrame = 1;
 //         break;
 //     case GLFW_KEY_SPACE:
 //         // add some particles.
-//         for (float y = constantParams.SIM_W * 2 - radius; y <= constantParams.SIM_W * 2 + radius; y += r * .5f)
+//         for (float y = SIM_W * 2 - radius; y <= SIM_W * 2 + radius; y += r * .5f)
 //         {
 //             for (float x = -radius; x <= radius; x += r * .5f)
 //             {
 //                 Particle p;
 //                 p.pos = p.pos_old = glm::vec2(x, y) + glm::vec2(rand01(), rand01());
 //                 p.force = glm::vec2(0, 0);
-//                 p.constantParams.sigma = 3.f;
-//                 p.constantParams.beta = 4.f;
+//                 p.sigma = 3.f;
+//                 p.beta = 4.f;
 
-//                 const glm::vec2 temp(p.pos - glm::vec2(0, constantParams.SIM_W * 2));
+//                 const glm::vec2 temp(p.pos - glm::vec2(0, SIM_W * 2));
 //                 if (glm::dot(temp, temp) < radius * radius)
 //                 {
 //                     // particles.push_back(p);
@@ -503,7 +503,7 @@ void motion(GLFWwindow *window, double xpos, double ypos)
     glfwGetWindowSize(window, &window_w, &window_h);
     float relx = (float)(xpos - window_w / 2) / window_w;
     float rely = -(float)(ypos - window_h) / window_h;
-    glm::vec2 mouse = glm::vec2(relx * constantParams.SIM_W * 2, rely * constantParams.SIM_W * 2);
+    glm::vec2 mouse = glm::vec2(relx * SIM_W * 2, rely * SIM_W * 2);
     attractor = mouse;
 }
 
@@ -517,41 +517,19 @@ void mouse(GLFWwindow *window, int button, int action, int mods)
     else
     {
         attracting = false;
-        attractor = glm::vec2(constantParams.SIM_W * 99, constantParams.SIM_W * 99);
+        attractor = glm::vec2(SIM_W * 99, SIM_W * 99);
     }
 }
 
 // --------------------------------------------------------------------
 int main(int argc, char **argv)
 {
-#if 0
-    const int steps = 3000;
-    std::cout << "--------------------------------" << std::endl;
-    std::cout  << "Number of steps: " << steps << std::endl;
-    for( unsigned int size = 10; size <= 13; ++size )
-    {
-        const unsigned int count = ( 1 << size );
-        std::cout << "Number of particles: " << count << std::endl;
-
-        init( count );
-
-        const auto beg = std::chrono::high_resolution_clock::now();
-        for( unsigned int i = 0; i < steps; ++i )
-        {
-            step();
-        }
-        const auto end = std::chrono::high_resolution_clock::now();
-
-        const auto duration( end - beg );
-        std::cout << "Elapsed time: " << std::chrono::duration_cast< std::chrono::milliseconds >( duration ).count() << " milliseconds" << std::endl;
-        std::cout << "Microseconds per step: " << std::chrono::duration_cast< std::chrono::microseconds >( duration ).count() / (double)steps << std::endl;
-        std::cout << std::endl;
-    }
-
-    return 0;
-#else
+    std::cout<<"PARTICLE_NUM :"<<(PARTICLE_NUM)<<std::endl;
+    std::cout<<"NEIGHBOR_NUM :"<<(NEIGHBOR_NUM)<<std::endl;
+    std::cout<<"OMP :"<<OMP<<std::endl;
+    std::cout<<"CUDA :"<<CUDA<<std::endl;
+    //printf("%d\n",num_of_threads);
     init(PARTICLE_NUM);
-    // init(8192*64);
 
     glfwInit();
 
@@ -578,13 +556,9 @@ int main(int argc, char **argv)
         // display( window );
         if (framecount % 50 == 0)
         {
-            // start=std::chrono::high_resolution_clock::now();
-            // now = std::clock();
-            // std::cout << "Duration: " << (now - prev) / (double)3300000000 << std::endl;
-            // prev = now;
-
-            // std::cout << "Duration: " << CycleTimer::currentSeconds() - start << std::endl;
-            // total = 0;
+            std::cout << "Framecount: " << framecount << std::endl;
+            std::cout << "Duration: " << CycleTimer::currentSeconds() - start << std::endl;
+            total = 0;
         }
 
         // glfwPollEvents();
@@ -597,7 +571,7 @@ int main(int argc, char **argv)
         framecount += stepsPerFrame;
         // double diff = CycleTimer::currentSeconds() - start;
         // total += diff;
-        // ttotal += diff;
+        // ttotal += diff;d
 
         // glfwSwapBuffers(window);
     }
@@ -606,5 +580,4 @@ int main(int argc, char **argv)
 
     glfwTerminate();
     return 0;
-#endif
 }

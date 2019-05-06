@@ -6,17 +6,19 @@
 __global__ void kernel_pressure(Particle *cudaDeviceParticles) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     //printf("%d ",i);
-    if (i < PARTICLE_NUM) {
+    if (i < PARTICLE_NUM) 
+    {
         cudaDeviceParticles[i].press = 0.002f * (cudaDeviceParticles[i].rho -3.f);
         cudaDeviceParticles[i].press_near = 0.02f* cudaDeviceParticles[i].rho_near;
     }
 }
 
-__global__ void kernel_pressure_force(Particle *cudaDeviceParticles, int *cudaDeviceNeighborNum, int *cudaDeviceNeighborIndex, float *cudaDeviceNeighborDist) 
+__global__ void kernel_pressure_force(Particle *cudaDeviceParticles, short *cudaDeviceNeighborNum, short *cudaDeviceNeighborIndex, float *cudaDeviceNeighborDist) 
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     //printf("%d ",i);
-    if (i < PARTICLE_NUM) {
+    if (i < PARTICLE_NUM) 
+    {
         glm::vec2 dX(0);
         for (int j = 0; j < cudaDeviceNeighborNum[i]; j++)
         {
@@ -36,7 +38,7 @@ __global__ void kernel_pressure_force(Particle *cudaDeviceParticles, int *cudaDe
     }
 }
 
-__global__ void kernel_viscosity(Particle *cudaDeviceParticles, int *cudaDeviceNeighborNum, int *cudaDeviceNeighborIndex, float *cudaDeviceNeighborDist) 
+__global__ void kernel_viscosity(Particle *cudaDeviceParticles, short *cudaDeviceNeighborNum, short *cudaDeviceNeighborIndex, float *cudaDeviceNeighborDist) 
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < PARTICLE_NUM) 
@@ -66,24 +68,24 @@ __global__ void kernel_viscosity(Particle *cudaDeviceParticles, int *cudaDeviceN
     }
 }
 
-void Surprise_CUDA(long N, Particle *particles, int *neighborNum, int *neighborIndex, float *neighborDist)
+void Surprise_CUDA(long N, Particle *particles, short *neighborNum, short *neighborIndex, float *neighborDist)
 {
     // globalConstants cuconstantParams;
     // cudaMemcpyToSymbol(cuconstantParams,(void *)&constantParams,sizeof(globalConstants));
 
     Particle *cudaDeviceParticle=NULL;
-    int *cudaDeviceNeighborNum = NULL;
-    int *cudaDeviceNeighborIndex=NULL;
+    short *cudaDeviceNeighborNum = NULL;
+    short *cudaDeviceNeighborIndex=NULL;
     float *cudaDeviceNeighborDist = NULL;
     
     cudaMalloc(&cudaDeviceParticle, sizeof(Particle) * N);
-    cudaMalloc(&cudaDeviceNeighborNum, sizeof(int)* N );
-    cudaMalloc(&cudaDeviceNeighborIndex, sizeof(int)* N * NEIGHBOR_NUM);
+    cudaMalloc(&cudaDeviceNeighborNum, sizeof(short)* N );
+    cudaMalloc(&cudaDeviceNeighborIndex, sizeof(short)* N * NEIGHBOR_NUM);
     cudaMalloc(&cudaDeviceNeighborDist, sizeof(float)* N * NEIGHBOR_NUM);
 
     cudaMemcpy(cudaDeviceParticle, particles, sizeof(Particle) * N, cudaMemcpyHostToDevice);
-    cudaMemcpy(cudaDeviceNeighborNum, neighborNum, sizeof(int) * N, cudaMemcpyHostToDevice);
-    cudaMemcpy(cudaDeviceNeighborIndex, neighborIndex, sizeof(int) * N * NEIGHBOR_NUM, cudaMemcpyHostToDevice);
+    cudaMemcpy(cudaDeviceNeighborNum, neighborNum, sizeof(short) * N, cudaMemcpyHostToDevice);
+    cudaMemcpy(cudaDeviceNeighborIndex, neighborIndex, sizeof(short) * N * NEIGHBOR_NUM, cudaMemcpyHostToDevice);
     cudaMemcpy(cudaDeviceNeighborDist, neighborDist, sizeof(float) * N * NEIGHBOR_NUM, cudaMemcpyHostToDevice);
 
     

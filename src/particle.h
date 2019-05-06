@@ -1,17 +1,4 @@
-#include "CycleTimer.h"
-#include <omp.h>
-#include <iostream>
-#include <fstream>
-#include <vector>
-#include <cmath>
-#include <glad/glad.h>
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
-#include <unordered_map>
-#include <chrono>
-
-#define PARTICLE_NUM 8192
+#define PARTICLE_NUM 15000
 #define NEIGHBOR_NUM 300
 #define OMP 1
 #define CUDA 1
@@ -23,22 +10,37 @@
 #define dbg_printf(...)
 #endif
 
+#include "CycleTimer.h"
+#if OMP
+#include <omp.h>
+#endif
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <cmath>
+#include <glad/glad.h>
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
+#include <unordered_map>
+#include <chrono>
+#include <thread>
+
+
 // --------------------------------------------------------------------
-struct globalConstants
-{
-    const float G = .02f * .25;        // Gravitational Constant for our simulation
-    const float spacing = 2.f;         // Spacing of particles
-    const float k = spacing / 1000.0f; // Far pressure weight
-    const float k_near = k * 10;       // Near pressure weight
-    const float rest_density = 3.f;      // Rest Density
-    const float r = spacing * 1.25f;   // Radius of Support
-    const float rsq = r * r;           // ... squared for performance stuff
-    const float SIM_W = 50;            // The size of the world
-    const float bottom = 0;            // The floor of the world
-    const float sigma = 3.f;
-    const float beta = 4.f;
-};
-const globalConstants constantParams;
+
+const int num_of_threads = std::thread::hardware_concurrency();
+const float G = .02f * .25;        // Gravitational Constant for our simulation
+const float spacing = 2.f;         // Spacing of particles
+const float k = spacing / 1000.0f; // Far pressure weight
+const float k_near = k * 10;       // Near pressure weight
+const float rest_density = 3;      // Rest Density
+const float r = spacing * 1.25f;   // Radius of Support
+const float rsq = r * r;           // ... squared for performance stuff
+const float SIM_W = 50;            // The size of the world
+const float bottom = 0;            // The floor of the world
+const float sigma = 3.f;
+const float beta = 4.f;
 
 // A structure for holding two neighboring particles and their weighted distances
 struct Particle;
@@ -67,4 +69,4 @@ struct Particle
     int id;
 };
 
-void Surprise_CUDA(long N, Particle *particles, int *neighborNum, int *neighborIndex, float *neighborDist);
+void Surprise_CUDA(long N, Particle *particles, short *neighborNum, short *neighborIndex, float *neighborDist);
