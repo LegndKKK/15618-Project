@@ -1,0 +1,2 @@
+/usr/bin/ar qc libparticles.a  CMakeFiles/particles.dir/src/particle.cu.o
+/usr/bin/ranlib libparticles.a
