@@ -201,7 +201,7 @@ void step()
         particles[i].rho_near = 0;
         particles[i].neighbors.clear();
     }
-    memset(neighborNum, 0, PARTICLE_NUM * sizeof(int));
+    memset(neighborNum, 0, PARTICLE_NUM * sizeof(short));
 
     // update spatial index
     indexsp.Clear();
@@ -273,7 +273,7 @@ void step()
 
                 // for CUDA use
                 // std::cout<<i<<std::endl;
-                neighborIndex[i][neighborNum[i]] = n.j->id;
+                neighborIndex[i][neighborNum[i]] = (short)n.j->id;
                 neighborDist[i][neighborNum[i]] = n.q;
                 neighborNum[i]++;
             }
